@@ -20,7 +20,7 @@ window.initWebflowMap = function(settings) {
     // 2. Safety Checks
     const mapElement = document.getElementById(containerId);
     if (!mapElement) {
-        console.error(`Map Error: Container #${containerId} not found.`);
+        console.error(`Map Errors: Container #${containerId} not found.`);
         return;
     }
     if (!lat || !lng) {
