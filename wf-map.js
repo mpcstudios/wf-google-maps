@@ -19,11 +19,11 @@ window.initWebflowMap = function(settings) {
     // 2. Safety Checks
     const mapElement = document.getElementById(containerId);
     if (!mapElement) {
-        console.error(`TNB Map Error: Container #${containerId} not found.`);
+        console.error(`Map Error: Container #${containerId} not found.`);
         return;
     }
     if (!lat || !lng) {
-        console.error("TNB Map Error: Latitude and Longitude are missing.");
+        console.error("Map Error: Latitude and Longitude are missing.");
         return;
     }
 
