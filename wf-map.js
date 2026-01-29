@@ -1,6 +1,7 @@
 /**
  * WF Location Map Engine v1.0
  * Reusable Google Maps logic for Webflow.
+ * Updated to fix Advanced Marker click events.
  */
 window.initWebflowMap = function(settings) {
     // 1. Destructure Settings
@@ -66,7 +67,9 @@ window.initWebflowMap = function(settings) {
 
     // 7. Add Listeners (Open on Load + Click)
     infowindow.open({ anchor: marker, map });
-    marker.addListener("click", () => {
+    
+    // FIXED: Changed from 'addListener' (Legacy) to 'addEventListener' (Advanced Marker)
+    marker.addEventListener("gmp-click", () => {
         infowindow.open({ anchor: marker, map });
     });
 };
