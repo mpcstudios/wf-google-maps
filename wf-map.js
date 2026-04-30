@@ -1,153 +1,76 @@
-(function () {
-  'use strict';
+/**
+ * WF Location Map Engine v1.0
+ * Reusable Google Maps logic for Webflow.
+ * Updated to fix Advanced Marker click events.
+ */
+window.initWebflowMap = function(settings) {
+    // 1. Destructure Settings
+    const { 
+        containerId = 'map-frame', 
+        lat, 
+        lng, 
+        zoom = 15, 
+        mapId, 
+        markerIcon, 
+        title = 'Bank Location',
+        address = '',
+        phone = ''
+    } = settings;
 
-  window.initWebflowMapMulti = function (config) {
-    config = config || {};
-
-    var containerId = config.containerId || 'map-frame';
-    var container = document.getElementById(containerId);
-
-    if (!container) {
-      console.warn('[wf-map-multi] No element found with id "' + containerId + '". Map not rendered.');
-      return;
+    // 2. Safety Checks
+    const mapElement = document.getElementById(containerId);
+    if (!mapElement) {
+        console.error(`Map Error: Container #${containerId} not found.`);
+        console.error(`Map Errors: Container #${containerId} not found.`);
+        return;
+    }
+    if (!lat || !lng) {
+        console.error("Map Error: Latitude and Longitude are missing.");
+        return;
     }
 
-    if (!window.google || !window.google.maps) {
-      console.error('[wf-map-multi] Google Maps API not loaded.');
-      return;
-    }
-
-    if (!config.mapId) {
-      console.warn('[wf-map-multi] No mapId provided. Advanced Markers require a Map ID.');
-    }
-
-    var selector = config.locationsSelector || '[data-map-location]';
-    var nodes = document.querySelectorAll(selector);
-    var locations = [];
-
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      var lat = parseFloat(el.getAttribute('data-lat'));
-      var lng = parseFloat(el.getAttribute('data-lng'));
-      if (isNaN(lat) || isNaN(lng)) continue;
-
-      // Marker URL: prefer data-marker attribute, fall back to a child img element
-      var markerIcon = el.getAttribute('data-marker') || '';
-      if (!markerIcon) {
-        var markerImg = el.querySelector('img[data-marker-img], img.wf-marker-img, img');
-        if (markerImg && markerImg.src) {
-          markerIcon = markerImg.src;
-        }
-      }
-
-      locations.push({
-        lat: lat,
-        lng: lng,
-        title: el.getAttribute('data-name') || el.getAttribute('data-title') || '',
-        address: el.getAttribute('data-address') || '',
-        phone: el.getAttribute('data-phone') || '',
-        markerIcon: markerIcon
-      });
-    }
-
-    if (locations.length === 0) {
-      console.warn('[wf-map-multi] No valid location elements found matching selector "' + selector + '".');
-    }
-
-    var defaultCenter = config.center || (locations[0]
-      ? { lat: locations[0].lat, lng: locations[0].lng }
-      : { lat: 0, lng: 0 });
-
-    var map = new google.maps.Map(container, {
-      center: defaultCenter,
-      zoom: config.zoom || 12,
-      mapId: config.mapId || undefined,
-      gestureHandling: 'cooperative'
+    // 3. Initialize Map
+    const map = new google.maps.Map(mapElement, {
+        center: { lat: lat, lng: lng },
+        zoom: zoom,
+        mapId: mapId, // Required for Advanced Markers
+        disableDefaultUI: true
     });
 
-    var infoWindow = new google.maps.InfoWindow();
-    var bounds = new google.maps.LatLngBounds();
-    var markerWidth = config.markerWidth || 40;
-    var hasAdvanced = !!(google.maps.marker && google.maps.marker.AdvancedMarkerElement);
+    // 4. Create Marker Icon
+    let markerContent = null;
+    if (markerIcon) {
+        const iconElement = document.createElement("img");
+        iconElement.src = markerIcon;
+        iconElement.style.width = "40px"; 
+        iconElement.style.height = "63px"; 
+        markerContent = iconElement;
+    }
 
-    locations.forEach(function (loc) {
-      var position = { lat: loc.lat, lng: loc.lng };
-      var marker;
-
-      if (hasAdvanced) {
-        var markerOptions = {
-          map: map,
-          position: position,
-          title: loc.title
-        };
-
-        if (loc.markerIcon) {
-          var iconImg = document.createElement('img');
-          iconImg.src = loc.markerIcon;
-          iconImg.alt = loc.title || 'Map marker';
-          iconImg.style.width = markerWidth + 'px';
-          iconImg.style.height = 'auto';
-          markerOptions.content = iconImg;
-        }
-
-        marker = new google.maps.marker.AdvancedMarkerElement(markerOptions);
-
-        marker.addListener('click', function () {
-          infoWindow.setContent(buildInfoWindowContent(loc));
-          infoWindow.open({ anchor: marker, map: map });
-        });
-      } else {
-        marker = new google.maps.Marker({
-          map: map,
-          position: position,
-          title: loc.title,
-          icon: loc.markerIcon || undefined
-        });
-
-        marker.addListener('click', function () {
-          infoWindow.setContent(buildInfoWindowContent(loc));
-          infoWindow.open(map, marker);
-        });
-      }
-
-      bounds.extend(position);
+    // 5. Place the Marker
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat: lat, lng: lng },
+        map: map,
+        content: markerContent,
+        title: title
     });
 
-    if (locations.length > 1 && config.fitBounds !== false) {
-      map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
-    } else if (locations.length === 1) {
-      map.setCenter({ lat: locations[0].lat, lng: locations[0].lng });
-      map.setZoom(config.zoom || 14);
-    }
+    // 6. Create Info Window
+    const contentString = `
+      <div style="max-width: 250px; padding: 5px;">
+        <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight:700;">${title}</h3>
+        <p style="margin: 0 0 5px 0; font-size: 14px;">${address}</p>
+        <a href="tel:${phone}" style="margin: 0; font-size: 14px; color: #0082f3; text-decoration:none;">${phone}</a>
+      </div>
+    `;
 
-    window._wfMapMulti = map;
-  };
+    const infowindow = new google.maps.InfoWindow({ content: contentString });
 
-  function buildInfoWindowContent(loc) {
-    var parts = [];
+    // 7. Add Listeners (Open on Load + Click)
+    infowindow.open({ anchor: marker, map });
 
-    if (loc.title) {
-      parts.push('<div style="font-weight:600;font-size:15px;margin-bottom:4px;">' + escapeHtml(loc.title) + '</div>');
-    }
-    if (loc.address) {
-      var encoded = encodeURIComponent(loc.address);
-      parts.push('<div style="font-size:13px;margin-bottom:4px;"><a href="https://www.google.com/maps/dir/?api=1&destination=' + encoded + '" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;">' + escapeHtml(loc.address) + '</a></div>');
-    }
-    if (loc.phone) {
-      var telHref = loc.phone.replace(/[^0-9+]/g, '');
-      parts.push('<div style="font-size:13px;"><a href="tel:' + telHref + '" style="color:#1a73e8;text-decoration:none;">' + escapeHtml(loc.phone) + '</a></div>');
-    }
-
-    return '<div style="font-family:inherit;padding:4px 6px;max-width:240px;">' + parts.join('') + '</div>';
-  }
-
-  function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-})();
+    // FIXED: Changed from 'addListener' (Legacy) to 'addEventListener' (Advanced Marker)
+    marker.addEventListener("gmp-click", () => {
+        infowindow.open({ anchor: marker, map });
+    });
+};
