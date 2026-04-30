@@ -1,51 +1,6 @@
-/**
- * wf-map-multi.js
- * Reusable Google Maps engine for Webflow projects — multi-marker version.
- * Renders one map with multiple pins, each pulled from a Webflow Collection List.
- *
- * Usage in Webflow page <head>:
- *
- *   <script src="https://cdn.jsdelivr.net/gh/mpcstudios/wf-google-maps@multi-marker/wf-map-multi.js"></script>
- *   <script>
- *     function startMap() {
- *       window.initWebflowMapMulti({
- *         containerId: 'map-frame',
- *         locationsSelector: '[data-map-location]',
- *         mapId: 'YOUR_MAP_ID',
- *         fitBounds: true
- *       });
- *     }
- *   </script>
- *   <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=startMap&libraries=marker" async defer></script>
- *
- * Webflow setup:
- *   1. Add a Div Block with id="map-frame" and a fixed height.
- *   2. Add a Collection List bound to your locations CMS.
- *   3. Inside the Collection Item, add a Div Block with these custom attributes:
- *        data-map-location="true"
- *        data-lat="{{ latitude field }}"
- *        data-lng="{{ longitude field }}"
- *        data-title="{{ name field }}"
- *        data-address="{{ address field }}"
- *        data-phone="{{ phone field }}"
- *        data-marker="{{ marker image URL }}"
- *   4. Set the Collection List itself to display: none (the data is read by JS, no need to render visually).
- */
-
 (function () {
   'use strict';
 
-  /**
-   * Initialize a Google Map with multiple markers from a Webflow Collection List.
-   * @param {Object} config
-   * @param {string} [config.containerId='map-frame'] - ID of the div to render the map into
-   * @param {string} [config.locationsSelector='[data-map-location]'] - CSS selector for elements holding location data
-   * @param {string} config.mapId - Google Cloud Map ID (required for Advanced Markers)
-   * @param {boolean} [config.fitBounds=true] - Auto-zoom/center to fit all markers
-   * @param {number} [config.zoom=12] - Initial zoom (used only when fitBounds is false or only 1 marker)
-   * @param {Object} [config.center] - { lat, lng } fallback center if no markers found
-   * @param {number} [config.markerWidth=40] - Width in px for marker icons
-   */
   window.initWebflowMapMulti = function (config) {
     config = config || {};
 
@@ -76,13 +31,21 @@
       var lng = parseFloat(el.getAttribute('data-lng'));
       if (isNaN(lat) || isNaN(lng)) continue;
 
+      var markerIcon = el.getAttribute('data-marker') || '';
+      if (!markerIcon) {
+        var markerImg = el.querySelector('img[data-marker-img], img.wf-marker-img, img');
+        if (markerImg && markerImg.src) {
+          markerIcon = markerImg.src;
+        }
+      }
+
       locations.push({
         lat: lat,
         lng: lng,
-        title: el.getAttribute('data-title') || '',
+        title: el.getAttribute('data-name') || el.getAttribute('data-title') || '',
         address: el.getAttribute('data-address') || '',
         phone: el.getAttribute('data-phone') || '',
-        markerIcon: el.getAttribute('data-marker') || ''
+        markerIcon: markerIcon
       });
     }
 
@@ -90,7 +53,6 @@
       console.warn('[wf-map-multi] No valid location elements found matching selector "' + selector + '".');
     }
 
-    // Default center (used if no locations or single-location override)
     var defaultCenter = config.center || (locations[0]
       ? { lat: locations[0].lat, lng: locations[0].lng }
       : { lat: 0, lng: 0 });
@@ -102,7 +64,6 @@
       gestureHandling: 'cooperative'
     });
 
-    // One shared info window — opening a new one closes the previous
     var infoWindow = new google.maps.InfoWindow();
     var bounds = new google.maps.LatLngBounds();
     var markerWidth = config.markerWidth || 40;
@@ -135,7 +96,6 @@
           infoWindow.open({ anchor: marker, map: map });
         });
       } else {
-        // Legacy fallback
         marker = new google.maps.Marker({
           map: map,
           position: position,
@@ -152,7 +112,6 @@
       bounds.extend(position);
     });
 
-    // Auto-fit to show all markers
     if (locations.length > 1 && config.fitBounds !== false) {
       map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
     } else if (locations.length === 1) {
@@ -160,7 +119,6 @@
       map.setZoom(config.zoom || 14);
     }
 
-    // Expose for debugging
     window._wfMapMulti = map;
   };
 
