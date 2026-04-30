@@ -25,7 +25,7 @@
  *        data-map-location="true"
  *        data-lat="{{ latitude field }}"
  *        data-lng="{{ longitude field }}"
- *        data-title="{{ name field }}"
+ *        data-name="{{ name field }}"
  *        data-address="{{ address field }}"
  *        data-phone="{{ phone field }}"
  *        data-marker="{{ marker image URL }}"
@@ -89,7 +89,7 @@
       locations.push({
         lat: lat,
         lng: lng,
-        title: el.getAttribute('data-title') || '',
+        title: el.getAttribute('data-name') || el.getAttribute('data-title') || '',
         address: el.getAttribute('data-address') || '',
         phone: el.getAttribute('data-phone') || '',
         markerIcon: markerIcon
