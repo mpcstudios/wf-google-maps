@@ -114,6 +114,15 @@
 
     if (locations.length > 1 && config.fitBounds !== false) {
       map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+
+      // Apply maxZoom AFTER fitBounds settles
+      if (config.maxZoom) {
+        google.maps.event.addListenerOnce(map, 'idle', function () {
+          if (map.getZoom() > config.maxZoom) {
+            map.setZoom(config.maxZoom);
+          }
+        });
+      }
     } else if (locations.length === 1) {
       map.setCenter({ lat: locations[0].lat, lng: locations[0].lng });
       map.setZoom(config.zoom || 14);
